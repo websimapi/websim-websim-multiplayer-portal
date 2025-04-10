@@ -641,9 +641,20 @@
       );
     }
 
-    function ChatRoom({ onJoinGame }) {
+    // Custom hook to use WebsimSocket for messages
+    function useMessages() {
       const room = useMemo(() => new WebsimSocket(), []);
-      const [messages, setMessages] = React.useState([]);
+      
+      const messages = React.useSyncExternalStore(
+        room.collection('message').subscribe,
+        room.collection('message').getList
+      );
+      
+      return messages.reverse(); // Newest messages first, then we'll display in reverse
+    }
+
+    function ChatRoom({ onJoinGame }) {
+      const messages = useMessages(); 
       const [newMessage, setNewMessage] = React.useState('');
       const [user, setUser] = React.useState(null);
       const messagesEndRef = React.useRef(null);
@@ -657,18 +668,9 @@
       }, []);
 
       React.useEffect(() => {
-        messages.subscribe(function (msgs) {
-          setMessages(msgs);
-          setTimeout(() => {
-            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-          }, 100);
-        });
-      }, []);
-
-      React.useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }, [messages]);
-
+      
       const handleSendMessage = async (e) => {
         e.preventDefault();
         if (!newMessage.trim()) return;
@@ -689,6 +691,7 @@
         }
 
         // Store the message in the database
+        const room = useMemo(() => new WebsimSocket(), []);
         await room.collection('message').create({
           text: newMessage,
           websim_url: websimUrl,
@@ -736,6 +739,7 @@
         onJoinGame({ url, title });
         
         // Update our presence to show we're in a game
+        const room = useMemo(() => new WebsimSocket(), []);
         room.updatePresence({
           online: true,
           lastActive: new Date().toISOString(),
@@ -923,18 +927,6 @@
       );
     }
 
-    // Custom hook to use WebsimSocket for messages
-    function useMessages() {
-      const room = useMemo(() => new WebsimSocket(), []);
-      
-      const messages = React.useSyncExternalStore(
-        room.collection('message').subscribe,
-        room.collection('message').getList
-      );
-      
-      return messages.reverse(); // Newest messages first, then we'll display in reverse
-    }
-
     function Main() {
       return (
         <React.StrictMode>
@@ -948,4 +940,3 @@
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
-
